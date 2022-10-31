@@ -6,6 +6,7 @@ from pathlib import Path
 from time import perf_counter_ns
 from typing import Any
 
+import ffmpeg
 import torch
 import whisper
 
@@ -25,8 +26,16 @@ parser.add_argument(
     "-o", "--output_dir", type=str, default="./out", help="File for transcribring"
 )
 parser.add_argument(
+    "-la",
+    "--language",
+    type=str,
+    default=argparse.SUPPRESS,
+    help="Language of audio, not set let whisper guess",
+)
+parser.add_argument(
     "-l", "--logging", action="store_true", default=False, help="create log file"
 )
+parser.add_argument("--prompt", type=str, default=[], nargs="+")
 args = parser.parse_args()
 
 use_cuda = not args.no_cuda and torch.cuda.is_available()
@@ -38,6 +47,13 @@ elif use_mps:
     device = torch.device("mps")
 else:
     device = torch.device("cpu")
+
+transcribe_arguments = {'fp16': False}
+if "language" in args:
+    transcribe_arguments["language"] = args.language
+
+if "prompt" in args:
+    transcribe_arguments["language"] = args.prompt
 
 
 logging.basicConfig(
@@ -59,6 +75,11 @@ if not output_dir.exists():
         pass
 
 
+def file_duration(file_path: Path) -> float:
+    info = ffmpeg.probe(file_path)
+    return float(info["format"]["duration"])
+
+
 def format_spend_time(start: int, end: int) -> str:
     spend_time = (end - start) / 1e9
     dt = datetime.utcfromtimestamp(spend_time)
@@ -70,15 +91,20 @@ model = whisper.load_model(args.model, device=device)
 end_time = perf_counter_ns()
 
 
-logging.debug(f"Loading took {format_spend_time(start_time, end_time)}")
+logging.debug(f"Loading took %s", format_spend_time(start_time, end_time)")
 
 file = files[0]
 for file in files:
-    logging.debug(f"{file.name}")
+    logging.debug("Starting %s duration: %d seconds", file.name, file_duration(file))
     print(f"{(80-len(file.name)-2)//2*'-'} {file.name} {(80-len(file.name)-2)//2*'-'}")
     start_time = perf_counter_ns()
 
-    result: dict[str, Any] = model.transcribe(str(file.resolve()), fp16=False)
+    # options = whisper.DecodingOptions(language='da')
+
+    result: dict[str, Any] = model.transcribe(
+        audio=file.resolve().as_posix(), **transcribe_arguments
+    )
+
     end_time = perf_counter_ns()
 
     with open(
@@ -89,6 +115,11 @@ for file in files:
         writer.writeheader()
         writer.writerows(result["segments"])
 
-    logging.debug(f"{file} processed in {format_spend_time(start_time, end_time)}")
+    logging.debug(
+        "End %s processed in %d, language used: %s",
+        file.name,
+        format_spend_time(start_time, end_time),
+        str(model.detect_language()),
+    )
     # print(f"{file} processed in {format_spend_time(start_time, end_time)}")
     print()
