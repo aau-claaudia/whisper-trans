@@ -21,7 +21,6 @@ parser.add_argument(
 parser.add_argument(
     "-i", "--input", nargs="+", type=str, default="", help="File for transcribring"
 )
-
 parser.add_argument(
     "-o", "--output_dir", type=str, default="./out", help="File for transcribring"
 )
@@ -48,7 +47,7 @@ elif use_mps:
 else:
     device = torch.device("cpu")
 
-transcribe_arguments = {'fp16': False}
+transcribe_arguments = {"fp16": False}
 if "language" in args:
     transcribe_arguments["language"] = args.language
 
@@ -91,7 +90,7 @@ model = whisper.load_model(args.model, device=device)
 end_time = perf_counter_ns()
 
 
-logging.debug(f"Loading took %s", format_spend_time(start_time, end_time)")
+logging.debug("Loading took %s", format_spend_time(start_time, end_time))
 
 file = files[0]
 for file in files:
@@ -102,7 +101,7 @@ for file in files:
     # options = whisper.DecodingOptions(language='da')
 
     result: dict[str, Any] = model.transcribe(
-        audio=file.resolve().as_posix(), **transcribe_arguments
+        file.resolve().as_posix(), **transcribe_arguments
     )
 
     end_time = perf_counter_ns()

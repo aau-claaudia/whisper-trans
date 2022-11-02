@@ -1,6 +1,11 @@
 [MASTER]
 docstring-min-length=10
-disable=missing-function-docstring,missing-class-docstring,missing-module-docstring
+disable=C0103,missing-function-docstring,missing-class-docstring,missing-module-docstring
 
 [FORMAT]
-good_names=i,j,x,y,id
+good-names=_,f,i,j,k,m,n,dt,__all__,__name__,__version__
+
+
+[TYPECHECK]
+ignored-modules=numpy,torch
+ignored-classes=numpy,torch
