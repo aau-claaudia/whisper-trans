@@ -1,5 +1,7 @@
 data/
 out/
+out*/
 .DS_STORE
 tkom/
 *.log
+.ipynb_*/
