@@ -9,13 +9,13 @@ $ pip install -r requirements.txt
 or with docker
 
 ```bash
-$ docker build --tag whisper-trans:latest .
+$ docker build --tag whispertranscribtion:latest .
 ```
 
 ## Usage
 
 ```bash
-docker run -it --rm -v $(PWD):/app ucloud_whisper:latest -o ./output -i inputfile1.wav inputfile2.wav --threads 4
+docker run -it --rm -v $(PWD):/app whispertranscribtion:latest -o ./output -i inputfile1.wav inputfile2.wav --threads 4
 ```
 
 ## usage:
