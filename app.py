@@ -1,15 +1,16 @@
 import argparse
-import csv
 import logging
 from datetime import datetime
 from pathlib import Path
 from time import perf_counter_ns
-from typing import Any, Iterator
+from typing import Any
 
 import ffmpeg
 import torch
 import whisper
-from whisper.utils import optional_int, write_srt
+from whisper.utils import optional_int
+
+from whispaau.writers import get_writer
 
 
 def file_duration(file_path: Path) -> float:
@@ -75,27 +76,17 @@ def arguments() -> dict[str, Any]:
     return vars(parser.parse_args())
 
 
-def write_csv(transcript: list[dict[str, str]], output_file: Path):
-    with open(
-        output_file.with_suffix(".csv"),
-        "w",
-        encoding="UTF-8",
-    ) as csvfile:
-        fieldnames: list[str] = list(transcript[0].keys())
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(transcript)
 
 
 def cli(args: dict[str, str]) -> None:
     output_dir: Path = args.get("output_dir")
     output_dir.mkdir(exist_ok=True)
 
-    use_cuda = args.get("no_cuda", None) and torch.cuda.is_available()
-    use_mps = args.get("no_mps", None) and torch.backends.mps.is_available()
+    use_cuda = not args.get("no_cuda") and torch.cuda.is_available()
+    use_mps = not args.get("no_mps") and torch.backends.mps.is_available()
     model_name = args.get("model")
     verbose = args.get("verbose")
-
+    
     def print_v(text: str) -> None:
         if verbose:
             print(text)
@@ -106,7 +97,7 @@ def cli(args: dict[str, str]) -> None:
         device = torch.device("mps")
     else:
         device = torch.device("cpu")
-
+    
     transcribe_arguments = {"fp16": False}
     if args.get("language", None):
         transcribe_arguments["language"] = args.language
@@ -131,12 +122,13 @@ def cli(args: dict[str, str]) -> None:
     start_time = perf_counter_ns()
     model = whisper.load_model(model_name, device=device)
     end_time = perf_counter_ns()
-
+    output_format = "all"
     logging.debug("Loading took %s", format_spend_time(start_time, end_time))
+    writer = get_writer(output_format, output_dir)
 
     for file in files:
         logging.debug(
-            "Starting %s duration: %d seconds", file.name, file_duration(file)
+            "Starting %s duration: %d seconds on device: %s", file.name, file_duration(file), device
         )
         print_v(
             f"{(80-len(file.name)-2)//2*'-'} {file.name} {(80-len(file.name)-2)//2*'-'}"
@@ -155,10 +147,7 @@ def cli(args: dict[str, str]) -> None:
         end_time = perf_counter_ns()
         print_v(result.keys())
 
-        write_csv(result["segments"], output_file)
-
-        with open(output_file.with_suffix(".srt"), "w", encoding="UTF-8") as srt:
-            write_srt(result["segments"], srt)
+        writer(result, output_file)
 
         logging.debug(
             "End %s processed on %s threads in %s",
