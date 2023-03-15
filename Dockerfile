@@ -23,4 +23,4 @@ ENV TZ Europe/Copenhagen
 
 WORKDIR /app
 
-ENTRYPOINT [ "python", "app.py" ]
+##ENTRYPOINT [ "python", "app.py" ]
