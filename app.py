@@ -23,7 +23,8 @@ def format_spend_time(start: int, end: int) -> str:
     dt = datetime.utcfromtimestamp(spend_time)
     return dt.strftime("%H:%M:%S.%f")
 
-
+from gooey import Gooey
+@Gooey
 def arguments() -> dict[str, Any]:
     parser = argparse.ArgumentParser()
     parser.add_argument(
