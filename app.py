@@ -13,6 +13,15 @@ from whisper.utils import optional_int
 from whispaau.writers import get_writer
 
 
+def get_directory(input_dir: str):
+    files = (
+        p.resolve()
+        for p in Path(input_dir).glob("**/*")
+        if p.suffix in {".mp3", ".mp4", ".m4a", ".wav", ".mpg"}
+    )
+    return files
+
+
 def file_duration(file_path: Path) -> float:
     info = ffmpeg.probe(file_path)
     return float(info["format"]["duration"])
@@ -40,6 +49,14 @@ def arguments() -> dict[str, Any]:
     )
     parser.add_argument(
         "--verbose", action="store_true", default=False, help="Print info to screen"
+    )
+    parser.add_argument(
+        "-i",
+        "--input_dir",
+        nargs="+",
+        type=get_directory,
+        required=True,
+        help="Directory of multiple files (mp3, m4a, mp4, wav) for transcribring",
     )
     parser.add_argument(
         "-i",
@@ -76,8 +93,6 @@ def arguments() -> dict[str, Any]:
     return vars(parser.parse_args())
 
 
-
-
 def cli(args: dict[str, str]) -> None:
     output_dir: Path = args.get("output_dir")
     output_dir.mkdir(exist_ok=True)
@@ -86,7 +101,7 @@ def cli(args: dict[str, str]) -> None:
     use_mps = not args.get("no_mps") and torch.backends.mps.is_available()
     model_name = args.get("model")
     verbose = args.get("verbose")
-    
+
     def print_v(text: str) -> None:
         if verbose:
             print(text)
@@ -97,7 +112,7 @@ def cli(args: dict[str, str]) -> None:
         device = torch.device("mps")
     else:
         device = torch.device("cpu")
-    
+
     transcribe_arguments = {"fp16": False}
     if args.get("language", None):
         transcribe_arguments["language"] = args.language
@@ -117,7 +132,9 @@ def cli(args: dict[str, str]) -> None:
         datefmt="%d-%b-%y %H:%M:%S",
     )
 
-    files = {file for file in args.get("input", []) if file.exists()}
+    files = {
+        file for file in args.get("input", args.get("input_dirs", [])) if file.exists()
+    }
 
     start_time = perf_counter_ns()
     model = whisper.load_model(model_name, device=device)
@@ -128,7 +145,10 @@ def cli(args: dict[str, str]) -> None:
 
     for file in files:
         logging.debug(
-            "Starting %s duration: %d seconds on device: %s", file.name, file_duration(file), device
+            "Starting %s duration: %d seconds on device: %s",
+            file.name,
+            file_duration(file),
+            device,
         )
         print_v(
             f"{(80-len(file.name)-2)//2*'-'} {file.name} {(80-len(file.name)-2)//2*'-'}"
@@ -142,10 +162,10 @@ def cli(args: dict[str, str]) -> None:
             output_dir
             / f"{file.stem}_{args.get('model')}_{result.get('language', '--')}"
         )
-        print(output_file)
+        print_v(output_file)
 
         end_time = perf_counter_ns()
-        print_v(result.keys())
+        print_v(f"Processed in {format_spend_time(start_time, end_time)}")
 
         writer(result, output_file)
 
