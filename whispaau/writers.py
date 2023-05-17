@@ -1,8 +1,14 @@
 import csv
 from typing import Callable, TextIO
 
-from whisper.utils import (ResultWriter, WriteJSON, WriteSRT, WriteTSV,
-                           WriteTXT, WriteVTT)
+from whisper.utils import (
+    ResultWriter,
+    WriteJSON,
+    WriteSRT,
+    WriteTSV,
+    WriteTXT,
+    WriteVTT,
+)
 
 
 # Todo usikkert på det her. Måske fjerne for at det skal virke?
@@ -14,7 +20,6 @@ class WriteCSV(ResultWriter):
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(result["segments"])
-
 
 
 def get_writer(output_format: str, output_dir: str) -> Callable[[dict, TextIO], None]:
