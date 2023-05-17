@@ -14,11 +14,11 @@ from whispaau.writers import get_writer
 
 
 def get_directory(input_dir: str):
-    files = (
+    files = [
         p.resolve()
         for p in Path(input_dir).glob("**/*")
         if p.suffix in {".mp3", ".mp4", ".m4a", ".wav", ".mpg"}
-    )
+    ]
     return files
 
 
@@ -50,20 +50,20 @@ def arguments() -> dict[str, Any]:
     parser.add_argument(
         "--verbose", action="store_true", default=False, help="Print info to screen"
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
         "-d",
         "--input_dir",
-        nargs="+",
         type=get_directory,
-        required=True,
+        # required=True,
         help="Directory of multiple files (mp3, m4a, mp4, wav) for transcribring",
     )
-    parser.add_argument(
+    group.add_argument(
         "-i",
         "--input",
         nargs="+",
         type=Path,
-        required=True,
+        required=False,
         help="File for transcribring",
     )
     parser.add_argument(
@@ -132,9 +132,12 @@ def cli(args: dict[str, str]) -> None:
         datefmt="%d-%b-%y %H:%M:%S",
     )
 
-    files = {
-        file for file in args.get("input", args.get("input_dirs", [])) if file.exists()
-    }
+    if args.get("input"):
+        input_files = args.get("input")
+    if args.get("input_dir"):
+        input_files = args.get("input_dir")
+
+    files = {file for file in input_files if file.exists()}
 
     start_time = perf_counter_ns()
     model = whisper.load_model(model_name, device=device)
@@ -142,7 +145,6 @@ def cli(args: dict[str, str]) -> None:
     output_format = "all"
     logging.debug("Loading took %s", format_spend_time(start_time, end_time))
     writer = get_writer(output_format, output_dir)
-
     for file in files:
         logging.debug(
             "Starting %s duration: %d seconds on device: %s",
