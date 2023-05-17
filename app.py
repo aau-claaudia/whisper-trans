@@ -51,7 +51,7 @@ def arguments() -> dict[str, Any]:
         "--verbose", action="store_true", default=False, help="Print info to screen"
     )
     parser.add_argument(
-        "-i",
+        "-d",
         "--input_dir",
         nargs="+",
         type=get_directory,
