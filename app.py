@@ -145,6 +145,9 @@ def cli(args: dict[str, str]) -> None:
     output_format = "all"
     logging.debug("Loading took %s", format_spend_time(start_time, end_time))
     writer = get_writer(output_format, output_dir)
+
+    print_v(f"Processing #{len(files)}..")
+
     for file in files:
         logging.debug(
             "Starting %s duration: %d seconds on device: %s",
@@ -168,7 +171,6 @@ def cli(args: dict[str, str]) -> None:
 
         end_time = perf_counter_ns()
         print_v(f"Processed in {format_spend_time(start_time, end_time)}")
-
         writer(result, output_file)
 
         logging.debug(
