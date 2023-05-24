@@ -17,4 +17,4 @@ tqdm==4.64.1
 transformers==4.25.1
 typing_extensions==4.4.0
 urllib3==1.26.13
-git+https://github.com/openai/whisper.git@c6e4e5efb3a1743bc24368528367d9fc8494f959
+git+https://github.com/openai/whisper.git
