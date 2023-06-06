@@ -172,11 +172,7 @@ def cli(args: dict[str, str]) -> None:
         end_time = perf_counter_ns()
         print_v(f"Processed in {format_spend_time(start_time, end_time)}")
 
-
-        logging.debug(
-            "Processing took  %s",
-	    format_speend_time(start_time, end_time)
-	)
+        logging.debug("Processing took  %s", format_spend_time(start_time, end_time))
 
         writer(result, output_file)
 
