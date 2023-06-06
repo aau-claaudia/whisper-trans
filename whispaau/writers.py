@@ -1,15 +1,21 @@
 import csv
 from typing import Callable, TextIO
 
-from whisper.utils import (ResultWriter, WriteJSON, WriteSRT, WriteTSV,
-                           WriteTXT, WriteVTT)
+from whisper.utils import (
+    ResultWriter,
+    WriteJSON,
+    WriteSRT,
+    WriteTSV,
+    WriteTXT,
+    WriteVTT,
+)
 
 
 # Todo usikkert på det her. Måske fjerne for at det skal virke?
 class WriteCSV(ResultWriter):
     extension: str = "csv"
 
-    def write_result(self, result: dict, file: TextIO):
+    def write_result(self, result: dict, file: TextIO, options: dict):
         fieldnames: list[str] = list(result["segments"][0].keys())
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
