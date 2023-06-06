@@ -174,7 +174,15 @@ def cli(args: dict[str, str]) -> None:
 
         logging.debug("Processing took  %s", format_spend_time(start_time, end_time))
 
-        writer(result, output_file, options={})
+        writer(
+            result,
+            output_file,
+            options={
+                "highlight_words": None,
+                "max_line_count": None,
+                "max_line_width": None,
+            },
+        )
 
         logging.debug(
             "End %s processed on %s threads in %s",
