@@ -35,9 +35,9 @@ def get_writer(output_format: str, output_dir: str) -> Callable[[dict, TextIO], 
     if output_format == "all":
         all_writers = [writer(output_dir) for writer in writers.values()]
 
-        def write_all(result: dict, file: TextIO):
+        def write_all(result: dict, file: TextIO, options: dict):
             for writer in all_writers:
-                writer(result, file)
+                writer(result, file, options)
 
         return write_all
 
