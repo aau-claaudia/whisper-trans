@@ -115,10 +115,10 @@ def cli(args: dict[str, str]) -> None:
 
     transcribe_arguments = {"fp16": False}
     if args.get("language", None):
-        transcribe_arguments["language"] = args.language
+        transcribe_arguments["language"] = args.get("language")
 
     if args.get("prompt", None):
-        transcribe_arguments["prompt"] = args.prompt
+        transcribe_arguments["prompt"] = args.get("prompt")
 
     threads = args.pop("threads")
     if threads > 0:
