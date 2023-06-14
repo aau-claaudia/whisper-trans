@@ -7,3 +7,5 @@ tkom/
 .ipynb_*/
 **/__pycache__
 **/*.pyc
+.idea
+.vscode
