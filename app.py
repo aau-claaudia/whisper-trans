@@ -92,6 +92,7 @@ def arguments() -> dict[str, Any]:
         help="number of threads used by torch for CPU inference",
     )
     parser.add_argument("--prompt", type=str, default=[], nargs="+")
+    parser.add_argument('args', nargs=argparse.REMAINDER) # Added to catch empty requests through shell script
     return vars(parser.parse_args())
 
 
