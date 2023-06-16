@@ -19,7 +19,7 @@ def get_directory(input_dir: str):
     files = [
         p.resolve()
         for p in Path(input_dir).glob("**/*")
-        if p.suffix in {".mp3", ".mp4", ".m4a", ".wav", ".mpg"}
+        if p.suffix.lower() in {".mp3", ".mp4", ".m4a", ".wav", ".mpg"}
     ]
     return files
 
