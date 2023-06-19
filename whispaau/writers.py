@@ -1,5 +1,6 @@
 import csv
 from typing import Callable, TextIO
+import json
 
 from whisper.utils import (
     ResultWriter,
@@ -8,10 +9,10 @@ from whisper.utils import (
     WriteTSV,
     WriteTXT,
     WriteVTT,
+    format_timestamp,
 )
 
 
-# Todo usikkert på det her. Måske fjerne for at det skal virke?
 class WriteCSV(ResultWriter):
     extension: str = "csv"
 
@@ -22,6 +23,27 @@ class WriteCSV(ResultWriter):
         writer.writerows(result["segments"])
 
 
+class WriteDOTE(ResultWriter):
+    extension: str = "dote.json"
+
+    def format_result(self, result: dict):
+        interface = {"lines": []}
+        for line in result["segments"]:
+            line_add = {
+                "startTime": format_timestamp(line["start"], True),
+                "endTime": format_timestamp(line["end"], True),
+                "speakerDesignation": "",
+                "text": line["text"].strip(),
+            }
+            interface["lines"].append(line_add)
+        else:
+            return interface
+
+    def write_result(self, result: dict, file: TextIO, options: dict):
+        result = self.format_result(result)
+        json.dump(result, file)
+
+
 def get_writer(output_format: str, output_dir: str) -> Callable[[dict, TextIO], None]:
     writers = {
         "txt": WriteTXT,
@@ -30,6 +52,7 @@ def get_writer(output_format: str, output_dir: str) -> Callable[[dict, TextIO], 
         "tsv": WriteTSV,
         "json": WriteJSON,
         "csv": WriteCSV,
+        "dote": WriteDOTE,
     }
 
     if output_format == "all":
