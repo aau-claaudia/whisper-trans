@@ -91,6 +91,12 @@ def arguments() -> dict[str, Any]:
         default=0,
         help="number of threads used by torch for CPU inference",
     )
+    parser.add_argument(
+        "--output_format",
+        type=str,
+        default="all",
+        help="What output format do you want?"
+    )
     parser.add_argument("--prompt", type=str, default=[], nargs="+")
     parser.add_argument('args', nargs=argparse.REMAINDER) # Added to catch empty requests through shell script
     return vars(parser.parse_args())
@@ -145,8 +151,10 @@ def cli(args: dict[str, str]) -> None:
     start_time = perf_counter_ns()
     model = whisper.load_model(model_name, device=device)
     end_time = perf_counter_ns()
-    output_format = "all"
+
     logging.debug("Loading took %s", format_spend_time(start_time, end_time))
+
+    output_format = args.pop('output_format')
     writer = get_writer(output_format, output_dir)
 
     print_v(f"Processing #{len(files)}..")
