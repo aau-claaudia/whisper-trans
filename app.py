@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from time import perf_counter_ns
 from typing import Any
-
+import sys
 import ffmpeg
 import torch
 import whisper
@@ -114,6 +114,7 @@ def cli(args: dict[str, str]) -> None:
     def print_v(text: str) -> None:
         if verbose:
             print(text)
+            sys.stdout.flush()
 
     if use_cuda:
         device = torch.device("cuda")
