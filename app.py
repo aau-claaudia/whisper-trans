@@ -152,7 +152,7 @@ def cli(args: dict[str, str]) -> None:
     model = whisper.load_model(model_name, device=device)
     end_time = perf_counter_ns()
 
-    logging.debug("Loading took %s", format_spend_time(start_time, end_time))
+    logging.debug("Loading '%s' model took %s", model_name, format_spend_time(start_time, end_time))
 
     output_format = args.pop('output_format')
     writer = get_writer(output_format, output_dir)
