@@ -9,3 +9,7 @@ tkom/
 **/*.pyc
 .idea
 .vscode
+*.egg-info/
+.installed.cfg
+*.egg
+**/.DS_Store

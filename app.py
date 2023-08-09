@@ -12,7 +12,7 @@ import torch
 import whisper
 from whisper.utils import optional_int
 
-from whispaau.writers import get_writer
+from whispaau.utils import get_writer
 
 
 def get_directory(input_dir: str):
@@ -95,14 +95,16 @@ def arguments() -> dict[str, Any]:
         "--output_format",
         type=str,
         default="all",
-        help="What output format do you want?"
+        help="What output format do you want?",
     )
     parser.add_argument("--prompt", type=str, default=[], nargs="+")
-    parser.add_argument('args', nargs=argparse.REMAINDER) # Added to catch empty requests through shell script
+    parser.add_argument(
+        "args", nargs=argparse.REMAINDER
+    )  # Added to catch empty requests through shell script
     return vars(parser.parse_args())
 
 
-def cli(args: dict[str, str]) -> None:
+def cli(args: dict[str, Any]) -> None:
     output_dir: Path = args.get("output_dir")
     output_dir.mkdir(exist_ok=True)
 
@@ -111,7 +113,7 @@ def cli(args: dict[str, str]) -> None:
     model_name = args.get("model")
     verbose = args.get("verbose")
 
-    def print_v(text: str) -> None:
+    def print_v(text: str | Path) -> None:
         if verbose:
             print(text)
             sys.stdout.flush()
@@ -153,9 +155,13 @@ def cli(args: dict[str, str]) -> None:
     model = whisper.load_model(model_name, device=device)
     end_time = perf_counter_ns()
 
-    logging.debug("Loading '%s' model took %s", model_name, format_spend_time(start_time, end_time))
+    logging.debug(
+        "Loading '%s' model took %s",
+        model_name,
+        format_spend_time(start_time, end_time),
+    )
 
-    output_format = args.pop('output_format')
+    output_format = args.pop("output_format")
     writer = get_writer(output_format, output_dir)
 
     print_v(f"Processing #{len(files)}..")

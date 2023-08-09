@@ -5,8 +5,8 @@ MAINTAINER Pelle Rosenbeck Gøeg <prg@its.aau.dk>
 
 RUN apt-get update
 RUN apt-get install -y ffmpeg
-RUN apt-get clean 
-RUN rm -rf /var/lib/apt/lists/* 
+RUN apt-get clean
+RUN rm -rf /var/lib/apt/lists/*
 
 RUN pip install git+https://github.com/openai/whisper.git
 
@@ -22,5 +22,3 @@ COPY . /app
 ENV TZ Europe/Copenhagen
 
 WORKDIR /app
-
-##ENTRYPOINT [ "python", "app.py" ]
