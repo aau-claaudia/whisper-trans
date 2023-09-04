@@ -13,3 +13,4 @@ tkom/
 .installed.cfg
 *.egg
 **/.DS_Store
+tmp/
