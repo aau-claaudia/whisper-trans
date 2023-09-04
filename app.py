@@ -1,122 +1,32 @@
 #!/usr/bin/env python
 
-import argparse
-import logging
-from datetime import datetime
+import sys
 from pathlib import Path
 from time import perf_counter_ns
 from typing import Any
-import sys
-import ffmpeg
+
 import torch
 import whisper
-from whisper.utils import optional_int
 
+from whispaau.archive import archiving
+from whispaau.cli_utils import parse_arguments
+from whispaau.logging import Logger
 from whispaau.utils import get_writer
 
 
-def get_directory(input_dir: str):
-    files = [
-        p.resolve()
-        for p in Path(input_dir).glob("**/*")
-        if p.suffix.lower() in {".mp3", ".mp4", ".m4a", ".wav", ".mpg"}
-    ]
-    return files
-
-
-def file_duration(file_path: Path) -> float:
-    info = ffmpeg.probe(file_path)
-    return float(info["format"]["duration"])
-
-
-def format_spend_time(start: int, end: int) -> str:
-    spend_time = (end - start) / 1e9
-    dt = datetime.utcfromtimestamp(spend_time)
-    return dt.strftime("%H:%M:%S.%f")
-
-
-def arguments() -> dict[str, Any]:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-m", "--model", default="large", type=str, help="what model is used?"
-    )
-    parser.add_argument(
-        "--no-mps",
-        action="store_true",
-        default=False,
-        help="disables macOS GPU training",
-    )
-    parser.add_argument(
-        "--no-cuda", action="store_true", default=False, help="disables CUDA training"
-    )
-    parser.add_argument(
-        "--verbose", action="store_true", default=False, help="Print info to screen"
-    )
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "-d",
-        "--input_dir",
-        type=get_directory,
-        # required=True,
-        help="Directory of multiple files (mp3, m4a, mp4, wav) for transcribring",
-    )
-    group.add_argument(
-        "-i",
-        "--input",
-        nargs="+",
-        type=Path,
-        required=False,
-        help="File for transcribring",
-    )
-    parser.add_argument(
-        "-o",
-        "--output_dir",
-        type=Path,
-        default=Path("./out"),
-        help="File for transcribring",
-    )
-    parser.add_argument(
-        "-la",
-        "--language",
-        type=str,
-        required=False,
-        help="Language of audio, not set let whisper guess",
-    )
-    parser.add_argument(
-        "-l", "--logging", action="store_true", default=False, help="create log file"
-    )
-    parser.add_argument(
-        "--threads",
-        type=optional_int,
-        default=0,
-        help="number of threads used by torch for CPU inference",
-    )
-    parser.add_argument(
-        "--output_format",
-        type=str,
-        default="all",
-        help="What output format do you want?",
-    )
-    parser.add_argument("--prompt", type=str, default=[], nargs="+")
-    parser.add_argument(
-        "args", nargs=argparse.REMAINDER
-    )  # Added to catch empty requests through shell script
-    return vars(parser.parse_args())
-
-
 def cli(args: dict[str, Any]) -> None:
+    job_name = args.get("job_name")
     output_dir: Path = args.get("output_dir")
     output_dir.mkdir(exist_ok=True)
+    verbose = args.get("verbose")
+    log = Logger(name=job_name, output_dir=output_dir, verbose=verbose)
 
+    # Setup CPU/GPU and model
     use_cuda = not args.get("no_cuda") and torch.cuda.is_available()
     use_mps = not args.get("no_mps") and torch.backends.mps.is_available()
     model_name = args.get("model")
-    verbose = args.get("verbose")
 
-    def print_v(text: str | Path) -> None:
-        if verbose:
-            print(text)
-            sys.stdout.flush()
+    secret_password = args.get("archive_password", None)
 
     if use_cuda:
         device = torch.device("cuda")
@@ -136,80 +46,77 @@ def cli(args: dict[str, Any]) -> None:
     if threads > 0:
         torch.set_num_threads(threads)
 
-    logging.basicConfig(
-        level=logging.DEBUG,
-        filename=output_dir / "transcribe.log",
-        filemode="a",
-        format="%(asctime)s - %(message)s",
-        datefmt="%d-%b-%y %H:%M:%S",
-    )
-
-    if args.get("input"):
-        input_files = args.get("input")
-    if args.get("input_dir"):
-        input_files = args.get("input_dir")
-
-    files = {file for file in input_files if file.exists()}
+    files = args.get("input")
 
     start_time = perf_counter_ns()
     model = whisper.load_model(model_name, device=device)
-    end_time = perf_counter_ns()
-
-    logging.debug(
-        "Loading '%s' model took %s",
-        model_name,
-        format_spend_time(start_time, end_time),
-    )
+    log.log_model_loading(model_name, start_time, perf_counter_ns())
 
     output_format = args.pop("output_format")
     writer = get_writer(output_format, output_dir)
 
-    print_v(f"Processing #{len(files)}..")
+    log.log_processing(files)
 
     for file in files:
-        logging.debug(
-            "Starting %s duration: %d seconds on device: %s",
-            file.name,
-            file_duration(file),
+        process_file(
+            log,
+            file,
+            output_dir,
+            model_name,
+            model,
             device,
-        )
-        print_v(
-            f"{(80-len(file.name)-2)//2*'-'} {file.name} {(80-len(file.name)-2)//2*'-'}"
-        )
-        start_time = perf_counter_ns()
-
-        result: dict[str, Any] = model.transcribe(
-            file.resolve().as_posix(), **transcribe_arguments
-        )
-        output_file = (
-            output_dir
-            / f"{file.stem}_{args.get('model')}_{result.get('language', '--')}"
-        )
-        print_v(output_file)
-
-        end_time = perf_counter_ns()
-        print_v(f"Processed in {format_spend_time(start_time, end_time)}")
-
-        logging.debug("Processing took  %s", format_spend_time(start_time, end_time))
-
-        writer(
-            result,
-            output_file,
-            options={
-                "highlight_words": None,
-                "max_line_count": None,
-                "max_line_width": None,
-            },
+            writer,
+            transcribe_arguments,
         )
 
-        logging.debug(
-            "End %s processed on %s threads in %s",
-            file.name,
-            threads,
-            format_spend_time(start_time, end_time),
-        )
+    # Scan for generated files in output_dir:
+    files_to_pack = [path for path in output_dir.glob("*") if path.is_file()]
+    # Pack everything into a process_name.zip
+    job_name_directory = Path(job_name)
+    archiving(
+        jobname=job_name_directory,
+        output_file=output_dir / job_name_directory.with_suffix(".zip"),
+        paths=files_to_pack,
+        secret_password=secret_password,
+    )
+
+
+def process_file(
+    log: Logger,
+    file: Path,
+    output_dir,
+    model_name,
+    model,
+    device,
+    writer,
+    trans_arguments,
+) -> None:
+    log.log_file_start(file, device)
+    start_time = perf_counter_ns()
+
+    result: dict[str, Any] = model.transcribe(
+        file.resolve().as_posix(), **trans_arguments
+    )
+    output_file = (
+        output_dir / f"{file.stem}_{model_name}_{result.get('language', '--')}"
+    )
+
+    writer(
+        result,
+        output_file,
+        options={
+            "highlight_words": None,
+            "max_line_count": None,
+            "max_line_width": None,
+        },
+    )
+
+    log.log_file_end(file, start_time, perf_counter_ns())
 
 
 if __name__ == "__main__":
-    cli_arguments = arguments()
+    arguments = sys.argv[1:]
+    # print(arguments)
+    cli_arguments = parse_arguments(None)
+    # print(cli_arguments)
     cli(cli_arguments)
