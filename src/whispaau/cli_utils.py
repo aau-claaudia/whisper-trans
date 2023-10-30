@@ -121,9 +121,10 @@ def parse_arguments(args: Optional[list[Any]] = None) -> dict[str, Any]:
     parser.add_argument(
         "--job_name",
         type=str,
-        default="jobname",
+        default="jobname2",
         help="what is the job name?",
     )
+
     parser.add_argument(
         "--args", nargs=argparse.REMAINDER
     )  # added to catch empty requests through shell script

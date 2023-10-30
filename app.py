@@ -58,6 +58,13 @@ def cli(args: dict[str, Any]) -> None:
     log.log_processing(files)
 
     for file in files:
+        options = {
+            "highlight_words": None,
+            "max_line_count": None,
+            "max_line_width": None,
+            "jobname": job_name,
+            "filename": file,
+        }
         process_file(
             log,
             file,
@@ -67,6 +74,7 @@ def cli(args: dict[str, Any]) -> None:
             device,
             writer,
             transcribe_arguments,
+            options,
         )
 
     # Scan for generated files in output_dir:
@@ -90,6 +98,7 @@ def process_file(
     device,
     writer,
     trans_arguments,
+    options: dict[str, Any],
 ) -> None:
     log.log_file_start(file, device)
     start_time = perf_counter_ns()
@@ -104,11 +113,7 @@ def process_file(
     writer(
         result,
         output_file,
-        options={
-            "highlight_words": None,
-            "max_line_count": None,
-            "max_line_width": None,
-        },
+        options,
     )
 
     log.log_file_end(file, start_time, perf_counter_ns())
@@ -116,7 +121,5 @@ def process_file(
 
 if __name__ == "__main__":
     arguments = sys.argv[1:]
-    # print(arguments)
     cli_arguments = parse_arguments(None)
-    # print(cli_arguments)
     cli(cli_arguments)
