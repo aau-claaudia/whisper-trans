@@ -121,7 +121,7 @@ def parse_arguments(args: Optional[list[Any]] = None) -> dict[str, Any]:
     parser.add_argument(
         "--job_name",
         type=str,
-        default="jobname2",
+        default="jobname",
         help="what is the job name?",
     )
 
