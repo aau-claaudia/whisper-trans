@@ -59,6 +59,10 @@ class Logger:
         )
         self.flush_stdout()
 
+    def log_threads(self, threads: int):
+        self.logger.debug("Threads initialised: %s", threads)
+        self.flush_stdout()
+
     def log_processing(self, files: Sized):
         self.logger.debug("Processing #%s..", len(files))
         self.flush_stdout()

@@ -45,6 +45,7 @@ def cli(args: dict[str, Any]) -> None:
     threads = args.pop("threads")
     if threads > 0:
         torch.set_num_threads(threads)
+        log.log_threads(threads)
 
     files = args.get("input")
 
